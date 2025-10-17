@@ -1,67 +1,33 @@
 package serverp;
-
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
+import java.net.*;
 
 public class Server {
     public static void main(String[] args) {
-        try {
-            InetAddress bindAddress = InetAddress.getByName("0.0.0.0");
-            InetSocketAddress socketAddress = new InetSocketAddress(bindAddress, 12340);
-            ServerSocket socketserveur = new ServerSocket();
-            socketserveur.bind(socketAddress);
-
-            System.out.println("Serveur en attente...");
+        try (ServerSocket socketserveur = new ServerSocket(1234)) {
+            System.out.println("En attente de connexion...");
             Socket socket = socketserveur.accept();
-            System.out.println("Client connecté : " + socket.getInetAddress());
-
+            System.out.println("Un client est connecté.");
             DataInputStream in = new DataInputStream(socket.getInputStream());
             DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-
             while (true) {
-            	int n1 = in.read();
-                String op= in.readUTF(); //na9rou byhe chaine 'readUTF'
-                int n2= in.read();
+                int n1 = in.readInt();
+                String op = in.readUTF();
+                int n2 = in.readInt();
                 if ("EXIT".equals(op)) {
                     System.out.println("Client déconnecté.");
                     break;
                 }
-
                 int res = 0;
-
                 switch (op) {
-                    case "+":
-                        res = n1 + n2;
-                        break;
-                    case "-":
-                        res= n1 - n2;
-                        break;
-                    case "*":
-                        res= n1 * n2;
-                        break;
-                    case "/":
-                        if (5 != 0) {
-                            res = n1 / n2;
-                        }
-                        break;
-                    default:
-                        res = 0;
+                    case "+": res = n1 + n2; break;
+                    case "-": res = n1 - n2; break;
+                    case "*": res = n1 * n2; break;
+                    case "/": res = (n2 != 0) ? n1 / n2 : 0; break;
                 }
-
-                out.writeInt(res);
-                System.out.println(n1 + op + n2+ "="+ res);
+                out.writeUTF(String.valueOf(res));
+                System.out.println(n1 + op + n2 + "=" + res);
             }
-
-            in.close();
-            out.close();
-            socket.close();
-            socketserveur.close();
-
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -1,64 +1,52 @@
 package clientp;
-
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
+import java.net.*;
 import java.util.Scanner;
-
+import java.util.regex.Pattern;
 public class Client {
+    private static final Pattern VALID_INPUT = Pattern.compile("^\\s*(-?\\d+)\\s*([+\\-*/])\\s*(-?\\d+)\\s*$");
+
     public static void main(String[] args) {
-        String SERVER_IP = "192.168.56.1";
+        try (Socket socket = new Socket("127.0.0.1", 1234);
+             DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+             DataInputStream in = new DataInputStream(socket.getInputStream());
+             Scanner scanner = new Scanner(System.in)) {
 
-        try {
-            InetAddress serverAddress = InetAddress.getByName(SERVER_IP);
-            InetSocketAddress socketAddress = new InetSocketAddress(serverAddress, 12340);
-            Socket socket = new Socket();
-            socket.connect(socketAddress);
-
-            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-            DataInputStream in = new DataInputStream(socket.getInputStream());
-            Scanner scanner = new Scanner(System.in);
+            System.out.println("Client connecté au serveur.");
+            System.out.println("Entrez une opération (ex: 55 * 25) ou '0' pour quitter :");
 
             while (true) {
-                System.out.println("1.  + ");
-                System.out.println("2.  - ");
-                System.out.println("3.  * ");
-                System.out.println("4.  / ");
-                System.out.println("0. Quitter");
-                System.out.print("Votre choix (0-4) : ");
+                System.out.print(">>> ");
+                String input = scanner.nextLine().trim();
 
-                int choix = scanner.nextInt();
-
-                if (choix == 0) {
+                if ("0".equals(input)) {
+                    out.writeInt(0);
+                    out.writeUTF("EXIT");
                     out.writeInt(0);
                     break;
                 }
 
-                if (choix < 1 || choix > 4) {
-                    System.out.println("Choix invalide !");
+                var matcher = VALID_INPUT.matcher(input);
+                if (!matcher.matches()) {
+                    System.out.println("Syntaxe invalide");
                     continue;
                 }
 
-                System.out.print("Entrez la valeur de x : ");
-                int x = scanner.nextInt();
+                int n1 = Integer.parseInt(matcher.group(1));
+                String op = matcher.group(2);
+                int n2 = Integer.parseInt(matcher.group(3));
 
-                out.writeInt(choix);
-                out.writeInt(x);
+                out.writeInt(n1);
+                out.writeUTF(op);
+                out.writeInt(n2);
 
-                int resultat = in.readInt();
-                System.out.println("Resultat : " + resultat);
+                String response = in.readUTF();
+                System.out.println("Résultat : " + response);
             }
 
-            out.close();
-            in.close();
-            socket.close();
-            System.out.println("Deconnexion terminee.");
-
+            System.out.println("Fin de la communication.");
         } catch (IOException e) {
-            System.err.println("Erreur de connexion au serveur.");
+            System.err.println("Impossible de se connecter au serveur.");
             e.printStackTrace();
         }
     }
